@@ -1,0 +1,118 @@
+
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>TP Stratégie Éditable</title>
+    <style>
+        body {
+            background-color: #121212;
+            color: #f1f1f1;
+            font-family: Arial, sans-serif;
+            padding: 20px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            background-color: #1e1e1e;
+        }
+        th, td {
+            border: 1px solid #333;
+            padding: 8px;
+            text-align: center;
+        }
+        h1 {
+            color: #0ff078;
+        }
+        input {
+            padding: 5px;
+            margin: 10px;
+            width: 70px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <h1>💰 Simulation TP Stratégie (Éditable)</h1>
+    <label for="montant">Montant initial (SOL) :</label>
+    <input type="number" id="montant" value="1" step="0.01" oninput="calculer()">
+
+    <table>
+        <thead>
+            <tr>
+                <th>Stratégie</th>
+                <th>TP #</th>
+                <th>% MC cible</th>
+                <th>% Tokens vendus</th>
+                <th>Tokens vendus (SOL)</th>
+                <th>% Tokens restants</th>
+                <th>Profit (SOL)</th>
+                <th>Vente cumulée (SOL)</th>
+                <th>Commentaire</th>
+            </tr>
+        </thead>
+        <tbody id="table-body"></tbody>
+    </table>
+
+    <script>
+        const data = [{"Stratégie": "🟢 Safe Mode", "TP": 1, "% MC": 20, "% Vendu": 100, "Commentaire": "Sortie totale à +20% MC\nProfit 20%"}, {"Stratégie": "🔵 Standard", "TP": 1, "% MC": 30, "% Vendu": 50, "Commentaire": "3 TP répartis jusqu’à +100% MC\nProfit 50%"}, {"Stratégie": NaN, "TP": 2, "% MC": 50, "% Vendu": 30, "Commentaire": NaN}, {"Stratégie": NaN, "TP": 3, "% MC": 100, "% Vendu": 20, "Commentaire": NaN}, {"Stratégie": "😈 Full Hold", "TP": 1, "% MC": 100, "% Vendu": 100, "Commentaire": "Tout vendu à +100% MC\nProfit 100%"}];
+        let currentData = JSON.parse(JSON.stringify(data));
+
+        function createInput(value, rowIndex, key) {
+            return `<input type='number' value='${value}' step='1' min='0' max='100' 
+                        oninput='updateValue(${rowIndex}, "${key}", this.value)' />`;
+        }
+
+        function updateValue(index, key, value) {
+            currentData[index][key] = parseFloat(value);
+            calculer();
+        }
+
+        function calculer() {
+            const montant = parseFloat(document.getElementById("montant").value);
+            let html = "";
+            let restants = 100;
+            let cumul = 0;
+            let lastStrat = "";
+
+            currentData.forEach((row, index) => {
+                const isNewStrat = row["Stratégie"] && row["Stratégie"] !== lastStrat;
+                if (isNewStrat) {
+                    restants = 100;
+                    cumul = 0;
+                    lastStrat = row["Stratégie"];
+                }
+
+                const prc = parseFloat(row["% Vendu"]);
+                const mc = parseFloat(row["% MC"]);
+
+                if (!isNaN(row["TP"]) && !isNaN(mc) && !isNaN(prc)) {
+                    const ratio = prc / 100;
+                    const mcFactor = mc / 100;
+                    const vendu = montant * (1 + mcFactor) * ratio;
+                    const profit = vendu - montant * ratio;
+                    const restantsAffiche = Math.max(restants - prc, 0);
+                    cumul += vendu;
+
+                    html += `<tr>
+                        <td>${row["Stratégie"] || ""}</td>
+                        <td>${row["TP"]}</td>
+                        <td>${createInput(mc, index, "% MC")}</td>
+                        <td>${createInput(prc, index, "% Vendu")}</td>
+                        <td>${vendu.toFixed(2)}</td>
+                        <td>${restantsAffiche.toFixed(2)}%</td>
+                        <td>${profit.toFixed(2)}</td>
+                        <td>${cumul.toFixed(2)}</td>
+                        <td>${row["Commentaire"] || ""}</td>
+                    </tr>`;
+
+                    restants -= prc;
+                }
+            });
+            document.getElementById("table-body").innerHTML = html;
+        }
+        calculer();
+    </script>
+</body>
+</html>
